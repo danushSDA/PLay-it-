@@ -12,6 +12,7 @@ import {
 } from 'electron';
 import path from 'path';
 import fs from 'fs';
+import { Readable } from 'stream';
 import { pathToFileURL } from 'url';
 import { dbService, DBTrack, DBVideo } from './database';
 import { parseAudioFile, scanDirectoryRecursively } from './metadata';
@@ -220,6 +221,23 @@ app.whenReady().then(async () => {
     console.warn('[Settings] Could not load initial acrylic mode:', err);
   }
 
+const MEDIA_MIME_TYPES: Record<string, string> = {
+  '.mp3': 'audio/mpeg',
+  '.flac': 'audio/flac',
+  '.wav': 'audio/wav',
+  '.ogg': 'audio/ogg',
+  '.m4a': 'audio/mp4',
+  '.aac': 'audio/aac',
+  '.opus': 'audio/opus',
+  '.mp4': 'video/mp4',
+  '.mkv': 'video/x-matroska',
+  '.webm': 'video/webm',
+  '.avi': 'video/x-msvideo',
+  '.mov': 'video/quicktime',
+  '.ts': 'video/mp2t',
+  '.vtt': 'text/vtt',
+};
+
   // Register custom protocol for streaming local files safely with range requests
   protocol.handle('media-stream', (request) => {
     try {
@@ -233,9 +251,52 @@ app.whenReady().then(async () => {
         return new Response('File not found', { status: 404 });
       }
 
-      // Convert filePath to a file:// URL and let net.fetch handle range requests and video streaming
-      const fileUrl = pathToFileURL(filePath).toString();
-      return net.fetch(fileUrl, { headers: request.headers });
+      const stat = fs.statSync(filePath);
+      const totalSize = stat.size;
+      const ext = path.extname(filePath).toLowerCase();
+      const mimeType = MEDIA_MIME_TYPES[ext] || 'application/octet-stream';
+
+      const rangeHeader = request.headers.get('range');
+      if (rangeHeader) {
+        const parts = rangeHeader.replace(/bytes=/, '').split('-');
+        const start = parseInt(parts[0], 10) || 0;
+        const end = parts[1] ? parseInt(parts[1], 10) : totalSize - 1;
+
+        if (start >= totalSize || end >= totalSize || start > end) {
+          return new Response(null, {
+            status: 416,
+            headers: {
+              'Content-Range': `bytes */${totalSize}`,
+            },
+          });
+        }
+
+        const chunkSize = end - start + 1;
+        const nodeStream = fs.createReadStream(filePath, { start, end });
+        const webStream = Readable.toWeb(nodeStream);
+
+        return new Response(webStream as any, {
+          status: 206,
+          headers: {
+            'Content-Range': `bytes ${start}-${end}/${totalSize}`,
+            'Accept-Ranges': 'bytes',
+            'Content-Length': String(chunkSize),
+            'Content-Type': mimeType,
+          },
+        });
+      } else {
+        const nodeStream = fs.createReadStream(filePath);
+        const webStream = Readable.toWeb(nodeStream);
+
+        return new Response(webStream as any, {
+          status: 200,
+          headers: {
+            'Accept-Ranges': 'bytes',
+            'Content-Length': String(totalSize),
+            'Content-Type': mimeType,
+          },
+        });
+      }
     } catch (err: any) {
       console.error('[Protocol] Error streaming media:', err);
       return new Response('Internal error: ' + err.message, { status: 500 });
