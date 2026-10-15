@@ -127,7 +127,7 @@ export const App: React.FC = () => {
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`app-window ${isMaximized ? 'maximized' : ''} ${!showPlayerBar ? 'no-player-bar' : ''} ${useWindowsAcrylic ? 'acrylic-mode' : ''}`}
+      className={`app-window ${isMaximized ? 'maximized' : ''} ${!showPlayerBar ? 'no-player-bar' : ''} ${useWindowsAcrylic ? 'acrylic-mode' : ''} ${mainTab === 'video-player' ? 'video-player-mode' : ''}`}
       data-theme={theme}
     >
       {/* Custom resize handles for transparent frameless window (hidden when maximized) */}

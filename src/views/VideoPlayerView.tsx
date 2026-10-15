@@ -17,6 +17,9 @@ import {
   Video as VideoIcon,
   Plus,
   Sparkles,
+  PanelRight,
+  Scan,
+  X,
 } from 'lucide-react';
 import { useLibraryStore } from '../store/useLibraryStore';
 import { usePlayerStore } from '../store/usePlayerStore';
@@ -75,6 +78,37 @@ export const VideoPlayerView: React.FC = () => {
   const [isEditingTime, setIsEditingTime] = useState(false);
   const [timeInputVal, setTimeInputVal] = useState('');
   const [showRemaining, setShowRemaining] = useState(false);
+  const [showSidePanel, setShowSidePanel] = useState(false);
+  const [fitMode, setFitMode] = useState<'contain' | 'cover' | 'fill'>('contain');
+  const [controlsVisible, setControlsVisible] = useState(true);
+  const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const resetHideTimer = () => {
+    setControlsVisible(true);
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    if (isPlaying) {
+      hideTimerRef.current = setTimeout(() => {
+        if (!showAmbientMenu && !showSpeedMenu && !showSidePanel && !isSeeking) {
+          setControlsVisible(false);
+        }
+      }, 3500);
+    }
+  };
+
+  useEffect(() => {
+    resetHideTimer();
+    return () => {
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    };
+  }, [isPlaying, showAmbientMenu, showSpeedMenu, showSidePanel]);
+
+  const cycleFitMode = () => {
+    setFitMode((prev) => {
+      if (prev === 'contain') return 'cover';
+      if (prev === 'cover') return 'fill';
+      return 'contain';
+    });
+  };
 
   const safeCurrentTime = (Number.isFinite(currentTime) && currentTime >= 0) ? currentTime : 0;
   const safeSeekPos = Number.isFinite(seekPos) && seekPos >= 0 ? seekPos : 0;
@@ -326,14 +360,52 @@ export const VideoPlayerView: React.FC = () => {
     }
   };
 
-  const handleFullscreen = () => {
-    if (!containerRef.current) return;
-    if (document.fullscreenElement) {
-      document.exitFullscreen().catch(console.error);
-    } else {
-      containerRef.current.requestFullscreen().catch(console.error);
+  const handleFullscreen = async () => {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else if (containerRef.current) {
+        await containerRef.current.requestFullscreen();
+      }
+    } catch (_) {
+      window.glassAPI?.toggleMaximize?.();
     }
   };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      if (e.key === ' ' || e.code === 'Space') {
+        e.preventDefault();
+        togglePlay();
+      } else if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        handleFullscreen();
+      } else if (e.key === 'c' || e.key === 'C') {
+        e.preventDefault();
+        cycleFitMode();
+      } else if (e.key === 'i' || e.key === 'I') {
+        e.preventDefault();
+        setShowSidePanel((prev) => !prev);
+      } else if (e.key === 'm' || e.key === 'M') {
+        e.preventDefault();
+        toggleMute();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        handleSeek(currentTime + 5);
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        handleSeek(currentTime - 5);
+      } else if (e.key === 'Escape') {
+        if (showSidePanel) setShowSidePanel(false);
+        if (showAmbientMenu) setShowAmbientMenu(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isPlaying, currentTime, totalDuration, showSidePanel, showAmbientMenu, isMuted]);
 
   const handlePiP = async () => {
     if (!videoRef.current) return;
@@ -403,7 +475,11 @@ export const VideoPlayerView: React.FC = () => {
         )}
 
         <div className="video-stage-container">
-          <div className="video-stage-canvas">
+          <div
+            className={`video-stage-canvas ${!controlsVisible && isPlaying ? 'idle-cursor' : ''}`}
+            onMouseMove={resetHideTimer}
+            onClick={resetHideTimer}
+          >
             {/* Ambient Video Glow Background (inside canvas) */}
             <div
               className="video-stage-bg-gradient"
@@ -422,15 +498,17 @@ export const VideoPlayerView: React.FC = () => {
               onPause={() => setIsPlaying(false)}
               onEnded={() => setIsPlaying(false)}
               onClick={togglePlay}
+              onDoubleClick={handleFullscreen}
               playsInline
               style={{
                 position: 'absolute',
                 inset: 0,
                 width: '100%',
                 height: '100%',
-                objectFit: 'contain',
+                objectFit: fitMode,
                 zIndex: 1,
-                cursor: 'pointer',
+                cursor: !controlsVisible && isPlaying ? 'none' : 'pointer',
+                transition: 'object-fit 0.2s ease',
               }}
             />
           ) : (
@@ -500,11 +578,19 @@ export const VideoPlayerView: React.FC = () => {
 
           {/* Top-left Chips */}
           {activeVideo && (
-            <div className="video-stage-chips-top">
+            <div className={`video-stage-chips-top ${!controlsVisible && isPlaying ? 'video-controls-hidden' : ''}`}>
               <span className="video-chip">
                 {probeData?.video?.resolutionLabel || resolutionDisplay}
               </span>
               <span className="video-chip">{speed}</span>
+              <button
+                type="button"
+                onClick={cycleFitMode}
+                className={`video-chip fit-chip ${fitMode === 'cover' ? 'active' : ''}`}
+                title="Aspect Fit Mode: Fit (Contain) / Cover Screen / Stretch"
+              >
+                {fitMode === 'cover' ? 'Cover Screen' : fitMode === 'fill' ? 'Stretch' : 'Fit'}
+              </button>
               {probeData?.video?.isHdr && <span className="video-chip">HDR</span>}
             </div>
           )}
@@ -522,7 +608,7 @@ export const VideoPlayerView: React.FC = () => {
           )}
 
           {/* Video Control Bar overlay */}
-          <div className="video-controls-overlay">
+          <div className={`video-controls-overlay ${!controlsVisible && isPlaying ? 'video-controls-hidden' : ''}`}>
             {/* Top row: elapsed, seek bar with A-B markers & band, total / remaining */}
             <div className="video-seek-row">
               {/* Current Time - Click to edit inline, scroll wheel to adjust +/- 5s */}
@@ -820,6 +906,34 @@ export const VideoPlayerView: React.FC = () => {
                   <Sparkles className="w-4 h-4 text-cyan-300" />
                 </button>
 
+                {/* Fit / Cover Screen mode */}
+                <button
+                  type="button"
+                  onClick={cycleFitMode}
+                  className={`video-icon-btn ${fitMode === 'cover' ? 'ambient-active' : ''}`}
+                  title={
+                    fitMode === 'cover'
+                      ? 'Screen: Cover Whole (Click for Stretch)'
+                      : fitMode === 'fill'
+                      ? 'Screen: Stretch (Click for Fit)'
+                      : 'Screen: Fit / Letterbox (Click to Cover Whole Screen)'
+                  }
+                  aria-label="Toggle Screen Fit / Cover"
+                >
+                  <Scan className="w-4 h-4" />
+                </button>
+
+                {/* Media Info & Queue Drawer Toggle */}
+                <button
+                  type="button"
+                  onClick={() => setShowSidePanel(!showSidePanel)}
+                  className={`video-icon-btn ${showSidePanel ? 'ambient-active' : ''}`}
+                  title={showSidePanel ? 'Hide Media Info & Queue (I)' : 'Show Media Info & Queue (I)'}
+                  aria-label="Toggle Side Drawer"
+                >
+                  <PanelRight className="w-4 h-4" />
+                </button>
+
                 {/* Picture in picture */}
                 <button
                   type="button"
@@ -948,14 +1062,28 @@ export const VideoPlayerView: React.FC = () => {
       </div>
     </div>
 
-      {/* 2. Right Side Panel: Media Info + Video Queue */}
-      <div className="video-right-panel">
-        {/* Card A: Media Info */}
-        <div className="video-glass-card media-info-card">
-          <div className="media-info-header">
-            <span className="media-info-title">Media info</span>
-            <Info className="w-4 h-4 text-orange-950/60" />
+      {/* 2. Floating Liquid Glass Drawer: Media Info + Video Queue */}
+      {showSidePanel && (
+        <div className="video-right-panel drawer">
+          <div className="video-drawer-top">
+            <span className="video-drawer-title">Media Details & Queue</span>
+            <button
+              type="button"
+              onClick={() => setShowSidePanel(false)}
+              className="video-drawer-close-btn"
+              title="Close Panel (Esc)"
+              aria-label="Close Panel"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
+
+          {/* Card A: Media Info */}
+          <div className="video-glass-card media-info-card">
+            <div className="media-info-header">
+              <span className="media-info-title">Media info</span>
+              <Info className="w-4 h-4 text-orange-950/60" />
+            </div>
 
           <div className="media-info-rows">
             <div className="media-info-row">
@@ -1083,6 +1211,7 @@ export const VideoPlayerView: React.FC = () => {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 };
