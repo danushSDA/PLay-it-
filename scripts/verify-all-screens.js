@@ -3,16 +3,29 @@ const path = require('path');
 const fs = require('fs');
 
 ipcMain.handle('db:get-settings', () => ({
-  theme: 'citrus',
-  accentColor: '#FF9A1F',
+  theme: 'deepsea',
+  accentColor: '#38d9ff',
   blurStrength: 32,
   glassOpacity: 0.35,
   waveEffects: true,
   reduceTransparency: false,
   useWindowsAcrylic: false,
+  ambientLight: {
+    enabled: true,
+    preset: 'deepsea',
+    blur: 64,
+    opacity: 0.75,
+    dynamicSampling: true,
+    wideMediumScreen: true,
+    saturation: 1.5,
+  },
 }));
-ipcMain.handle('db:get-tracks', () => []);
-ipcMain.handle('db:get-videos', () => []);
+ipcMain.handle('db:get-tracks', () => [
+  { id: '1', title: 'Oceanic Depths', artist: 'Abyssal Calm', album: 'Deep Sea Vol. 1', duration: 245, file_path: 'C:/fake/ocean.mp3' }
+]);
+ipcMain.handle('db:get-videos', () => [
+  { id: 'v1', title: 'Deep Sea Bioluminescence 4K', duration: 180, width: 3840, height: 2160, file_path: 'C:/fake/deepsea.mp4', codec: 'hevc' }
+]);
 ipcMain.handle('db:get-playlists', () => []);
 ipcMain.handle('db:save-setting', () => true);
 ipcMain.handle('window:get-state', () => ({ isMaximized: false, isMiniPlayer: false, useWindowsAcrylic: false }));
@@ -58,8 +71,14 @@ async function captureScreen(tabName, filename) {
 
   await win.webContents.executeJavaScript(`
     window.__useLibraryStore.getState().setMainTab('${tabName}');
+    if ('${tabName}' === 'video-player') {
+      setTimeout(() => {
+        const btn = document.querySelector('.video-icon-btn.ambient-btn');
+        if (btn) btn.click();
+      }, 500);
+    }
   `);
-  await new Promise((r) => setTimeout(r, 1400));
+  await new Promise((r) => setTimeout(r, 1600));
 
   const img = await win.webContents.capturePage();
   fs.writeFileSync(path.join(outDir, filename), img.toPNG());

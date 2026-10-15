@@ -9,25 +9,35 @@ interface SettingsState extends AppSettings {
   setEnableVisualizer: (enable: boolean) => void;
   setReduceTransparency: (reduce: boolean) => void;
   setThemeMode: (mode: 'dark' | 'light') => void;
-  setTheme: (theme: 'citrus' | 'night' | 'pastel') => void;
+  setTheme: (theme: 'deepsea' | 'citrus' | 'night' | 'pastel') => void;
   setUseWindowsAcrylic: (use: boolean) => void;
   setAnimationPreference: (pref: 'full' | 'reduced' | 'off') => void;
   setDominantColor: (color: string | null) => void;
+  setAmbientLight: (settings: Partial<AppSettings['ambientLight']>) => void;
   loadSettings: () => Promise<void>;
 }
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
-  accentColor: '#ff9f1c', // Default Tangerine citrus accent
+  accentColor: '#38d9ff', // Deep Sea Oceanic Teal accent
   blurStrength: 32,
   glassOpacity: 0.42,
   enableVisualizer: true,
   reduceTransparency: false,
   themeMode: 'dark',
-  theme: 'citrus', // Default theme is Citrus
+  theme: 'deepsea', // Default theme is Deep Sea
   useWindowsAcrylic: false,
   animationPreference: 'full',
   dominantColor: null,
   sleepTimerMinutes: null,
+  ambientLight: {
+    enabled: true,
+    preset: 'cinematic',
+    blur: 64,
+    opacity: 0.85,
+    dynamicSampling: true,
+    wideMediumScreen: true,
+    saturation: 1.6,
+  },
 
   setAccentColor: (accentColor) => {
     set({ accentColor });
@@ -79,6 +89,21 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   setDominantColor: (dominantColor) => set({ dominantColor }),
 
+  setAmbientLight: (partial) => {
+    const current = get().ambientLight || {
+      enabled: true,
+      preset: 'cinematic',
+      blur: 64,
+      opacity: 0.85,
+      dynamicSampling: true,
+      wideMediumScreen: true,
+      saturation: 1.6,
+    };
+    const updated = { ...current, ...partial };
+    set({ ambientLight: updated });
+    window.glassAPI?.saveSetting?.('ambientLight', updated);
+  },
+
   loadSettings: async () => {
     if (typeof document !== 'undefined') {
       document.documentElement.setAttribute('data-theme', get().theme);
@@ -87,7 +112,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     try {
       const saved = await window.glassAPI.getSettings();
       if (saved) {
-        const theme = (saved.theme as 'citrus' | 'night' | 'pastel') || get().theme;
+        const theme = (saved.theme as 'deepsea' | 'citrus' | 'night' | 'pastel') || get().theme;
         set({
           accentColor: saved.accentColor || get().accentColor,
           blurStrength: typeof saved.blurStrength === 'number' ? saved.blurStrength : get().blurStrength,
@@ -98,6 +123,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
           theme,
           useWindowsAcrylic: typeof saved.useWindowsAcrylic === 'boolean' ? saved.useWindowsAcrylic : false,
           animationPreference: saved.animationPreference || 'full',
+          ambientLight: saved.ambientLight ? { ...get().ambientLight, ...saved.ambientLight } : get().ambientLight,
         });
         if (typeof document !== 'undefined') {
           document.documentElement.setAttribute('data-theme', theme);

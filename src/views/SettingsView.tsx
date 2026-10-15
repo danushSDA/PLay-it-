@@ -31,6 +31,8 @@ export const SettingsView: React.FC = () => {
     setReduceTransparency,
     accentColor,
     setAccentColor,
+    theme,
+    setTheme,
   } = useSettingsStore();
 
   const { pickAndImportFolder, loadLibrary } = useLibraryStore();
@@ -66,11 +68,15 @@ export const SettingsView: React.FC = () => {
   const [globalMediaKeys, setGlobalMediaKeys] = useState(true);
   const [startOnBoot, setStartOnBoot] = useState(false);
 
-  // Accent Swatches: Lemon, Tangerine, Grapefruit, Lime
+  // Accent Swatches: Deep Sea & Citrus Oceanic Palettes
   const ACCENT_SWATCHES = [
-    { label: 'Lemon', hex: '#F5C518' },
+    { label: 'Foggy Teal', hex: '#38d9ff' },
+    { label: 'Ink Black', hex: '#0d1b2a' },
+    { label: 'Prussian Blue', hex: '#1b263b' },
+    { label: 'Dusk Blue', hex: '#415a77' },
+    { label: 'Lavender Grey', hex: '#778da9' },
+    { label: 'Alabaster Grey', hex: '#e0e1dd' },
     { label: 'Tangerine', hex: '#FF9A1F' },
-    { label: 'Grapefruit', hex: '#FF5E7A' },
     { label: 'Lime', hex: '#8CD11F' },
   ];
 
@@ -303,6 +309,59 @@ export const SettingsView: React.FC = () => {
                   <span className="settings-slider-val">
                     {Math.round(glassOpacity * 100)}%
                   </span>
+                </div>
+              </div>
+
+              {/* Theme Selector: Deep Sea (Primary), Citrus, Night, Pastel */}
+              <div className="settings-row" style={{ alignItems: 'flex-start' }}>
+                <div className="settings-row-info">
+                  <span className="settings-row-title">Color Theme</span>
+                  <span className="settings-row-sub">
+                    Liquid glass aesthetics & ambient aura
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {[
+                    { id: 'deepsea', label: 'Deep Sea', color: '#0d1b2a', border: '#38d9ff' },
+                    { id: 'citrus', label: 'Citrus', color: '#fff4ec', border: '#FF9A1F' },
+                    { id: 'night', label: 'Night', color: '#14102d', border: '#ff4fa3' },
+                    { id: 'pastel', label: 'Pastel', color: '#f5f3ff', border: '#a78bfa' },
+                  ].map((t) => {
+                    const isSelected = (theme || 'deepsea') === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setTheme(t.id as any)}
+                        style={{
+                          padding: '6px 14px',
+                          borderRadius: '12px',
+                          background: isSelected ? 'var(--accent-tint)' : 'rgba(255, 255, 255, 0.1)',
+                          border: `1.5px solid ${isSelected ? t.border : 'rgba(255, 255, 255, 0.2)'}`,
+                          color: 'var(--theme-text)',
+                          fontSize: '12px',
+                          fontWeight: isSelected ? 700 : 500,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          transition: 'all 0.15s ease',
+                          boxShadow: isSelected ? `0 0 12px ${t.border}44` : 'none',
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: '10px',
+                            height: '10px',
+                            borderRadius: '50%',
+                            backgroundColor: t.border,
+                            boxShadow: `0 0 6px ${t.border}`,
+                          }}
+                        />
+                        <span>{t.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 

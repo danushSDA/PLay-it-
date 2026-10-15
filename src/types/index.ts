@@ -45,6 +45,16 @@ export type SortOrder = 'asc' | 'desc';
 export type MusicViewMode = 'songs' | 'albums' | 'artists' | 'playlists' | 'favorites' | 'recent';
 export type MainTab = 'music' | 'videos' | 'albums' | 'artists' | 'playlists' | 'favorites' | 'settings' | 'video-player';
 
+export interface AmbientLightSettings {
+  enabled: boolean;
+  preset: 'cinematic' | 'deepsea' | 'aurora' | 'sunset';
+  blur: number; // 20 to 140 px
+  opacity: number; // 0.15 to 1.0
+  dynamicSampling: boolean; // sample live video colors
+  wideMediumScreen: boolean; // extra dispersion on medium screens
+  saturation: number; // 1.0 to 2.5
+}
+
 export interface AppSettings {
   accentColor: string; // hex color or preset
   blurStrength: number; // 10 to 45 px
@@ -52,10 +62,11 @@ export interface AppSettings {
   enableVisualizer: boolean;
   reduceTransparency: boolean;
   themeMode: 'dark' | 'light';
-  theme: 'citrus' | 'night' | 'pastel';
+  theme: 'deepsea' | 'citrus' | 'night' | 'pastel';
   useWindowsAcrylic?: boolean;
   animationPreference?: 'full' | 'reduced' | 'off';
   sleepTimerMinutes: number | null; // null if off
+  ambientLight?: AmbientLightSettings;
 }
 
 export interface EqualizerSettings {

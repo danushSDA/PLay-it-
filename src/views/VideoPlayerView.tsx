@@ -16,9 +16,11 @@ import {
   Check,
   Video as VideoIcon,
   Plus,
+  Sparkles,
 } from 'lucide-react';
 import { useLibraryStore } from '../store/useLibraryStore';
 import { usePlayerStore } from '../store/usePlayerStore';
+import { useSettingsStore } from '../store/useSettingsStore';
 import { MediaProbeResult, Video } from '../types';
 import { formatTime, parseTimeToSeconds } from '../utils/timeUtils';
 
@@ -37,7 +39,23 @@ export const VideoPlayerView: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const speedMenuRef = useRef<HTMLDivElement>(null);
+  const ambientMenuRef = useRef<HTMLDivElement>(null);
   const timeInputRef = useRef<HTMLInputElement>(null);
+
+  const { ambientLight: storedAmbient, setAmbientLight } = useSettingsStore();
+  const ambientSettings = storedAmbient || {
+    enabled: true,
+    preset: 'cinematic',
+    blur: 64,
+    opacity: 0.85,
+    dynamicSampling: true,
+    wideMediumScreen: true,
+    saturation: 1.6,
+  };
+  const [showAmbientMenu, setShowAmbientMenu] = useState(false);
+  const [ambientGradient, setAmbientGradient] = useState<string>(
+    'radial-gradient(circle at 50% 45%, rgba(56, 217, 255, 0.45) 0%, rgba(65, 90, 119, 0.35) 50%, rgba(13, 27, 42, 0.95) 100%)'
+  );
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -101,16 +119,105 @@ export const VideoPlayerView: React.FC = () => {
     };
   }, [activeVideo]);
 
-  // Handle outside click for speed menu
+  // Handle outside click for speed menu and ambient menu
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (speedMenuRef.current && !speedMenuRef.current.contains(e.target as Node)) {
         setShowSpeedMenu(false);
       }
+      if (ambientMenuRef.current && !ambientMenuRef.current.contains(e.target as Node)) {
+        // Only close if not clicking ambient button
+        const target = e.target as HTMLElement;
+        if (!target.closest?.('.video-icon-btn.ambient-btn')) {
+          setShowAmbientMenu(false);
+        }
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Real-time video frame color sampling for ambient light
+  useEffect(() => {
+    if (!ambientSettings.enabled) return;
+
+    if (ambientSettings.preset === 'deepsea') {
+      setAmbientGradient(
+        'radial-gradient(circle at 50% 40%, rgba(56, 217, 255, 0.5) 0%, rgba(27, 38, 59, 0.75) 45%, rgba(13, 27, 42, 0.98) 100%)'
+      );
+      return;
+    }
+
+    if (ambientSettings.preset === 'aurora') {
+      setAmbientGradient(
+        'radial-gradient(circle at 40% 40%, rgba(56, 217, 255, 0.52) 0%, rgba(168, 85, 247, 0.42) 40%, rgba(13, 27, 42, 0.96) 100%)'
+      );
+      return;
+    }
+
+    if (ambientSettings.preset === 'sunset') {
+      setAmbientGradient(
+        'radial-gradient(circle at 50% 45%, rgba(255, 154, 31, 0.5) 0%, rgba(255, 94, 98, 0.4) 45%, rgba(20, 10, 15, 0.96) 100%)'
+      );
+      return;
+    }
+
+    // Cinematic live video color sampling
+    if (!ambientSettings.dynamicSampling || !isPlaying || !videoRef.current) {
+      return;
+    }
+
+    let isMounted = true;
+    const canvas = document.createElement('canvas');
+    canvas.width = 16;
+    canvas.height = 9;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+    const sampleInterval = setInterval(() => {
+      if (!isMounted || !videoRef.current || videoRef.current.paused || videoRef.current.ended) return;
+      try {
+        ctx?.drawImage(videoRef.current, 0, 0, 16, 9);
+        const imgData = ctx?.getImageData(0, 0, 16, 9).data;
+        if (!imgData) return;
+
+        let rTop = 0, gTop = 0, bTop = 0;
+        let rBot = 0, gBot = 0, bBot = 0;
+        let rMid = 0, gMid = 0, bMid = 0;
+
+        for (let x = 0; x < 16; x++) {
+          const topIdx = x * 4;
+          rTop += imgData[topIdx];
+          gTop += imgData[topIdx + 1];
+          bTop += imgData[topIdx + 2];
+
+          const botIdx = (8 * 16 + x) * 4;
+          rBot += imgData[botIdx];
+          gBot += imgData[botIdx + 1];
+          bBot += imgData[botIdx + 2];
+
+          const midIdx = (4 * 16 + x) * 4;
+          rMid += imgData[midIdx];
+          gMid += imgData[midIdx + 1];
+          bMid += imgData[midIdx + 2];
+        }
+
+        const boost = ambientSettings.saturation || 1.4;
+        const cap = (val: number) => Math.min(255, Math.round((val / 16) * boost));
+
+        const topCol = `rgb(${cap(rTop)}, ${cap(gTop)}, ${cap(bTop)})`;
+        const botCol = `rgb(${cap(rBot)}, ${cap(gBot)}, ${cap(bBot)})`;
+        const midCol = `rgb(${cap(rMid)}, ${cap(gMid)}, ${cap(bMid)})`;
+
+        const grad = `radial-gradient(circle at 50% 35%, ${midCol} 0%, ${topCol} 45%, ${botCol} 85%, rgba(13, 27, 42, 0.96) 100%)`;
+        setAmbientGradient(grad);
+      } catch (_) {}
+    }, 100);
+
+    return () => {
+      isMounted = false;
+      clearInterval(sampleInterval);
+    };
+  }, [ambientSettings, isPlaying]);
 
   useEffect(() => {
     if (isEditingTime) {
@@ -281,11 +388,27 @@ export const VideoPlayerView: React.FC = () => {
 
   return (
     <div className="video-player-screen" ref={containerRef}>
-      {/* 1. Main Video Stage */}
-      <div className="video-stage-container">
-        <div className="video-stage-canvas">
-          {/* Ambient Video Glow Background */}
-          <div className="video-stage-bg-gradient" />
+      {/* 1. Main Video Stage with Medium Screen Ambient Light Halo */}
+      <div className="video-ambient-wrapper">
+        {/* Dynamic Medium Screen Ambient Light Halo */}
+        {ambientSettings.enabled && (
+          <div
+            className={`video-ambient-outer-halo ${ambientSettings.wideMediumScreen ? 'wide-active' : ''}`}
+            style={{
+              background: ambientGradient,
+              opacity: ambientSettings.opacity,
+              filter: `blur(${ambientSettings.blur}px)`,
+            }}
+          />
+        )}
+
+        <div className="video-stage-container">
+          <div className="video-stage-canvas">
+            {/* Ambient Video Glow Background (inside canvas) */}
+            <div
+              className="video-stage-bg-gradient"
+              style={ambientSettings.enabled ? { background: ambientGradient, opacity: ambientSettings.opacity } : undefined}
+            />
 
           {/* Actual HTML5 Video Element */}
           {activeVideo && streamUrl ? (
@@ -686,6 +809,17 @@ export const VideoPlayerView: React.FC = () => {
                   <ChevronRight className="w-4 h-4" />
                 </button>
 
+                {/* Ambient Light Customizations button */}
+                <button
+                  type="button"
+                  onClick={() => setShowAmbientMenu(!showAmbientMenu)}
+                  className={`video-icon-btn ambient-btn ${ambientSettings.enabled && showAmbientMenu ? 'ambient-active' : ''}`}
+                  title="Ambient Light Customizations"
+                  aria-label="Ambient Light Settings"
+                >
+                  <Sparkles className="w-4 h-4 text-cyan-300" />
+                </button>
+
                 {/* Picture in picture */}
                 <button
                   type="button"
@@ -710,8 +844,109 @@ export const VideoPlayerView: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Ambient Light Customization Popover */}
+          {showAmbientMenu && (
+            <div className="video-ambient-popover" ref={ambientMenuRef}>
+              <div className="ambient-popover-header">
+                <div className="ambient-popover-title">
+                  <Sparkles className="w-4 h-4 text-cyan-400" />
+                  <span>Ambient Light</span>
+                </div>
+                <span className="ambient-popover-badge">Medium Screen Ready</span>
+              </div>
+
+              {/* Master Toggle */}
+              <div className="ambient-popover-row">
+                <div>
+                  <div className="ambient-popover-label">Ambient Glow</div>
+                  <div className="ambient-popover-sub">Project dynamic atmospheric aura</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAmbientLight({ enabled: !ambientSettings.enabled })}
+                  className={`liquid-glass-switch ${ambientSettings.enabled ? 'on' : 'off'}`}
+                  aria-label="Toggle ambient glow"
+                >
+                  <div className="liquid-glass-switch-knob" />
+                </button>
+              </div>
+
+              {/* Presets */}
+              <div className="ambient-preset-grid">
+                {[
+                  { id: 'cinematic', label: '🎬 Cinematic' },
+                  { id: 'deepsea', label: '🌊 Deep Sea' },
+                  { id: 'aurora', label: '✨ Aurora' },
+                  { id: 'sunset', label: '🌅 Sunset' },
+                ].map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setAmbientLight({ preset: p.id as any })}
+                    className={`ambient-preset-btn ${ambientSettings.preset === p.id ? 'active' : ''}`}
+                  >
+                    <span>{p.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Blur Spread Slider */}
+              <div className="ambient-slider-row">
+                <div className="ambient-slider-head">
+                  <span>Glow Dispersion</span>
+                  <span style={{ color: '#38d9ff', fontSize: '11px', fontFamily: 'monospace' }}>
+                    {ambientSettings.blur}px
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={20}
+                  max={120}
+                  value={ambientSettings.blur}
+                  onChange={(e) => setAmbientLight({ blur: parseInt(e.target.value) })}
+                  className="ambient-slider"
+                />
+              </div>
+
+              {/* Opacity Slider */}
+              <div className="ambient-slider-row">
+                <div className="ambient-slider-head">
+                  <span>Glow Opacity</span>
+                  <span style={{ color: '#38d9ff', fontSize: '11px', fontFamily: 'monospace' }}>
+                    {Math.round(ambientSettings.opacity * 100)}%
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={15}
+                  max={100}
+                  value={Math.round(ambientSettings.opacity * 100)}
+                  onChange={(e) => setAmbientLight({ opacity: parseInt(e.target.value) / 100 })}
+                  className="ambient-slider"
+                />
+              </div>
+
+              {/* Medium Screen Dispersion toggle */}
+              <div className="ambient-popover-row">
+                <div>
+                  <div className="ambient-popover-label">Medium Screen Wide Aura</div>
+                  <div className="ambient-popover-sub">Expand halo in windowed view</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAmbientLight({ wideMediumScreen: !ambientSettings.wideMediumScreen })}
+                  className={`liquid-glass-switch ${ambientSettings.wideMediumScreen ? 'on' : 'off'}`}
+                  aria-label="Toggle medium screen wide aura"
+                >
+                  <div className="liquid-glass-switch-knob" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
+    </div>
 
       {/* 2. Right Side Panel: Media Info + Video Queue */}
       <div className="video-right-panel">
