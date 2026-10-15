@@ -47,11 +47,19 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   setBlurStrength: (blurStrength) => {
     set({ blurStrength });
     window.glassAPI?.saveSetting?.('blurStrength', blurStrength);
+    if (typeof document !== 'undefined') {
+      document.documentElement.style.setProperty('--glass-blur', `${blurStrength}px`);
+    }
   },
 
   setGlassOpacity: (glassOpacity) => {
     set({ glassOpacity });
     window.glassAPI?.saveSetting?.('glassOpacity', glassOpacity);
+    if (typeof document !== 'undefined') {
+      document.documentElement.style.setProperty('--glass-opacity', `${glassOpacity}`);
+      document.documentElement.style.setProperty('--theme-window-bg', `rgba(13, 27, 42, ${glassOpacity})`);
+      document.documentElement.style.setProperty('--theme-card-bg', `rgba(255, 255, 255, ${Math.max(0.04, glassOpacity * 0.16)})`);
+    }
   },
 
   setEnableVisualizer: (enableVisualizer) => {
@@ -62,6 +70,19 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   setReduceTransparency: (reduceTransparency) => {
     set({ reduceTransparency });
     window.glassAPI?.saveSetting?.('reduceTransparency', reduceTransparency);
+    if (typeof document !== 'undefined') {
+      if (reduceTransparency) {
+        document.documentElement.style.setProperty('--theme-window-bg', '#0d1b2a');
+        document.documentElement.style.setProperty('--theme-card-bg', 'rgba(27, 38, 59, 0.95)');
+        document.documentElement.style.setProperty('--glass-blur', '0px');
+      } else {
+        const opacity = get().glassOpacity;
+        const blur = get().blurStrength;
+        document.documentElement.style.setProperty('--theme-window-bg', `rgba(13, 27, 42, ${opacity})`);
+        document.documentElement.style.setProperty('--theme-card-bg', `rgba(255, 255, 255, ${Math.max(0.04, opacity * 0.16)})`);
+        document.documentElement.style.setProperty('--glass-blur', `${blur}px`);
+      }
+    }
   },
 
   setThemeMode: (themeMode) => {
@@ -127,6 +148,19 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         });
         if (typeof document !== 'undefined') {
           document.documentElement.setAttribute('data-theme', theme);
+          const blur = typeof saved.blurStrength === 'number' ? saved.blurStrength : get().blurStrength;
+          const opacity = typeof saved.glassOpacity === 'number' ? saved.glassOpacity : get().glassOpacity;
+          const reduce = typeof saved.reduceTransparency === 'boolean' ? saved.reduceTransparency : get().reduceTransparency;
+          if (reduce) {
+            document.documentElement.style.setProperty('--theme-window-bg', '#0d1b2a');
+            document.documentElement.style.setProperty('--theme-card-bg', 'rgba(27, 38, 59, 0.95)');
+            document.documentElement.style.setProperty('--glass-blur', '0px');
+          } else {
+            document.documentElement.style.setProperty('--glass-blur', `${blur}px`);
+            document.documentElement.style.setProperty('--glass-opacity', `${opacity}`);
+            document.documentElement.style.setProperty('--theme-window-bg', `rgba(13, 27, 42, ${opacity})`);
+            document.documentElement.style.setProperty('--theme-card-bg', `rgba(255, 255, 255, ${Math.max(0.04, opacity * 0.16)})`);
+          }
         }
       }
     } catch (e) {

@@ -8,6 +8,7 @@ import {
   ArtistsIcon,
   PlaylistsIcon,
   FavoritesIcon,
+  FoldersIcon,
   SettingsIcon,
 } from './SidebarIcons';
 import { useLibraryStore } from '../store/useLibraryStore';
@@ -106,7 +107,7 @@ export const Sidebar: React.FC = () => {
   const NAV_ITEMS = [
     {
       id: 'music',
-      label: 'Music',
+      label: 'Songs',
       icon: MusicIcon,
       isActive: isMusicActive,
       onClick: () => {
@@ -124,15 +125,6 @@ export const Sidebar: React.FC = () => {
       },
     },
     {
-      id: 'albums',
-      label: 'Albums',
-      icon: AlbumsIcon,
-      isActive: isAlbumsActive,
-      onClick: () => {
-        setMainTab('albums');
-      },
-    },
-    {
       id: 'artists',
       label: 'Artists',
       icon: ArtistsIcon,
@@ -142,12 +134,12 @@ export const Sidebar: React.FC = () => {
       },
     },
     {
-      id: 'playlists',
-      label: 'Playlists',
-      icon: PlaylistsIcon,
-      isActive: isPlaylistsActive,
+      id: 'albums',
+      label: 'Albums',
+      icon: AlbumsIcon,
+      isActive: isAlbumsActive,
       onClick: () => {
-        setMainTab('playlists');
+        setMainTab('albums');
       },
     },
     {
@@ -157,6 +149,15 @@ export const Sidebar: React.FC = () => {
       isActive: isFavoritesActive,
       onClick: () => {
         setMainTab('favorites');
+      },
+    },
+    {
+      id: 'folders',
+      label: 'Folders',
+      icon: FoldersIcon,
+      isActive: false,
+      onClick: () => {
+        pickAndImportFolder();
       },
     },
     {

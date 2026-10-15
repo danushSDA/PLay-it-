@@ -367,6 +367,14 @@ export const TitleBar: React.FC = () => {
               <X className="w-3.5 h-3.5" />
             </button>
           )}
+
+          {/* Filter Dropdown Pill: All ▼ */}
+          <div className="search-filter-pill" title="Filter search scope">
+            <span>All</span>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M7 10l5 5 5-5z" />
+            </svg>
+          </div>
         </div>
 
         {/* Live Search Quick Results Dropdown */}

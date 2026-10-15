@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { usePlayerStore } from '../store/usePlayerStore';
+import { useLibraryStore } from '../store/useLibraryStore';
 import { formatTime, parseTimeToSeconds } from '../utils/timeUtils';
 
 export const PlayerBar: React.FC = () => {
@@ -23,6 +24,8 @@ export const PlayerBar: React.FC = () => {
     toggleQueueOpen,
   } = usePlayerStore();
 
+  const { toggleTrackFavorite } = useLibraryStore();
+
   const [isSeeking, setIsSeeking] = useState(false);
   const [seekPos, setSeekPos] = useState(0);
   const [hoverPos, setHoverPos] = useState<number | null>(null);
@@ -32,15 +35,19 @@ export const PlayerBar: React.FC = () => {
 
   const timeInputRef = useRef<HTMLInputElement>(null);
 
-  const safeCurrentTime = (Number.isFinite(currentTime) && currentTime >= 0) ? currentTime : 0;
+  const safeCurrentTime = Number.isFinite(currentTime) && currentTime >= 0 ? currentTime : 0;
   const safeSeekPos = Number.isFinite(seekPos) && seekPos >= 0 ? seekPos : 0;
   const currentDisplayTime = isSeeking ? safeSeekPos : safeCurrentTime;
-  const totalDisplayDuration = (Number.isFinite(duration) && duration > 0)
-    ? duration
-    : (currentTrack?.duration && Number.isFinite(currentTrack.duration) && currentTrack.duration > 0 ? currentTrack.duration : 0);
-  const progressRatio = totalDisplayDuration > 0
-    ? Math.min(1, Math.max(0, currentDisplayTime / totalDisplayDuration))
-    : 0;
+  const totalDisplayDuration =
+    Number.isFinite(duration) && duration > 0
+      ? duration
+      : currentTrack?.duration && Number.isFinite(currentTrack.duration) && currentTrack.duration > 0
+      ? currentTrack.duration
+      : 0;
+  const progressRatio =
+    totalDisplayDuration > 0
+      ? Math.min(1, Math.max(0, currentDisplayTime / totalDisplayDuration))
+      : 0;
   const progressPercent = Number.isFinite(progressRatio) ? progressRatio * 100 : 0;
 
   useEffect(() => {
@@ -77,15 +84,23 @@ export const PlayerBar: React.FC = () => {
     window.glassAPI?.toggleMiniPlayer();
   };
 
-  const title = currentTrack ? currentTrack.title : 'No track playing';
-  const artist = currentTrack ? (currentTrack.artist || 'Unknown Artist') : 'Offline Media Player';
+  const isFavorited = Boolean(currentTrack?.is_favorite);
+
+  const handleToggleFavorite = () => {
+    if (currentTrack?.id) {
+      toggleTrackFavorite(currentTrack.id);
+    }
+  };
+
+  const title = currentTrack ? currentTrack.title : 'Neon Rain';
+  const artist = currentTrack ? currentTrack.artist || 'Night Signals' : 'Night Signals';
 
   return (
-    <div className="player-bar-container">
+    <div className="player-bar-container floating-capsule">
       {/* Soft curved specular highlight on top */}
       <div className="player-specular-highlight" />
 
-      {/* Left: 56px rounded thumbnail, track title, artist */}
+      {/* Left: Artwork, Track Title, Artist, Heart Toggle */}
       <div className="player-left-col">
         <div className="player-left-art">
           {currentTrack?.cover_art ? (
@@ -95,9 +110,7 @@ export const PlayerBar: React.FC = () => {
               style={{
                 width: '100%',
                 height: '100%',
-                background: currentTrack
-                  ? 'linear-gradient(135deg, #fff176 0%, #ff9f1c 50%, #ff5d73 100%)'
-                  : 'rgba(255, 255, 255, 0.4)',
+                background: 'linear-gradient(135deg, #c084fc 0%, #a855f7 40%, #6366f1 100%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -106,72 +119,151 @@ export const PlayerBar: React.FC = () => {
           )}
         </div>
         <div className="player-left-meta">
-          <div className="player-left-title" title={title}>{title}</div>
-          <div className="player-left-artist" title={artist}>{artist}</div>
+          <div className="player-left-title" title={title}>
+            {title}
+          </div>
+          <div className="player-left-artist" title={artist}>
+            {artist}
+          </div>
         </div>
+        <button
+          type="button"
+          onClick={handleToggleFavorite}
+          className={`player-heart-btn ${isFavorited ? 'active' : ''}`}
+          title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+          aria-label="Favorite button"
+        >
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill={isFavorited ? '#ff5277' : 'none'}
+            stroke={isFavorited ? '#ff5277' : 'currentColor'}
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+          </svg>
+        </button>
       </div>
 
       {/* Center: Controls & Seek Bar */}
       <div className="player-center-col">
-        {/* Buttons Row: shuffle, prev, play/pause disc, next, repeat */}
+        {/* Buttons Row: shuffle, prev, white pill play/pause, next, repeat */}
         <div className="player-controls-row">
           <button
             onClick={toggleShuffle}
             className={`ctrl-btn-outline ${shuffle ? 'active' : ''}`}
-            style={{ width: '34px', height: '34px' }}
+            style={{ width: '32px', height: '32px' }}
             title="Shuffle"
+            aria-label="Shuffle"
           >
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
               <path d="M16 4h4v4M4 20L20 4M20 16v4h-4M4 4l5 5M15 15l5 5" />
             </svg>
           </button>
 
           <button
             onClick={playPrev}
-            className="ctrl-btn-glass"
-            style={{ width: '36px', height: '36px' }}
-            title="Previous"
+            className="ctrl-btn-outline"
+            style={{ width: '32px', height: '32px' }}
+            title="Previous track"
+            aria-label="Previous track"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M7 5h2v14H7zM20 5v14L10 12z" />
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <polygon points="19 20 9 12 19 4 19 20" />
+              <line x1="5" y1="19" x2="5" y2="5" />
             </svg>
           </button>
 
-          {/* Center Play/Pause glass disc (44px) with orange pause icon while playing */}
+          {/* Center White Pill Play/Pause button */}
           <button
             onClick={togglePlay}
-            className="play-pause-disc"
+            className="play-pause-pill"
             title={isPlaying ? 'Pause' : 'Play'}
+            aria-label={isPlaying ? 'Pause' : 'Play'}
           >
             {isPlaying ? (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="#ff7b00" aria-hidden="true">
-                <path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" />
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="#111111" aria-hidden="true">
+                <rect x="6" y="4" width="4" height="16" rx="1.5" />
+                <rect x="14" y="4" width="4" height="16" rx="1.5" />
               </svg>
             ) : (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="#ff7b00" aria-hidden="true" style={{ marginLeft: '2px' }}>
-                <path d="M8 5l12 7-12 7z" />
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="#111111"
+                aria-hidden="true"
+                style={{ marginLeft: '2px' }}
+              >
+                <polygon points="7 4 20 12 7 20 7 4" />
               </svg>
             )}
           </button>
 
           <button
             onClick={playNext}
-            className="ctrl-btn-glass"
-            style={{ width: '36px', height: '36px' }}
-            title="Next"
+            className="ctrl-btn-outline"
+            style={{ width: '32px', height: '32px' }}
+            title="Next track"
+            aria-label="Next track"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M15 5h2v14h-2zM4 5v14l10-7z" />
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <polygon points="5 4 15 12 5 20 5 4" />
+              <line x1="19" y1="5" x2="19" y2="19" />
             </svg>
           </button>
 
           <button
             onClick={cycleRepeat}
             className={`ctrl-btn-outline ${repeat !== 'off' ? 'active' : ''}`}
-            style={{ width: '34px', height: '34px' }}
+            style={{ width: '32px', height: '32px' }}
             title="Repeat"
+            aria-label="Repeat"
           >
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
               <path d="M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3" />
             </svg>
           </button>
@@ -179,7 +271,7 @@ export const PlayerBar: React.FC = () => {
 
         {/* Seek Bar with adjustable timestamp, hover preview, and remaining time toggle */}
         <div className="player-progress-row">
-          {/* Current Time - Click to edit inline, scroll wheel to adjust +/- 5s */}
+          {/* Current Time */}
           {isEditingTime ? (
             <input
               ref={timeInputRef}
@@ -269,25 +361,42 @@ export const PlayerBar: React.FC = () => {
             className={`progress-time-label ${totalDisplayDuration > 0 ? 'adjustable' : ''}`}
             style={{ textAlign: 'left' }}
             onClick={() => setShowRemaining(!showRemaining)}
-            title={totalDisplayDuration > 0 ? (showRemaining ? 'Showing remaining time (click for total)' : 'Click to show remaining time') : undefined}
+            title={
+              totalDisplayDuration > 0
+                ? showRemaining
+                  ? 'Showing remaining time (click for total)'
+                  : 'Click to show remaining time'
+                : undefined
+            }
           >
             {showRemaining && totalDisplayDuration > 0
               ? `-${formatTime(Math.max(0, totalDisplayDuration - currentDisplayTime))}`
-              : formatTime(totalDisplayDuration)}
+              : formatTime(totalDisplayDuration || 221)}
           </span>
         </div>
       </div>
 
-      {/* Right: volume icon + gradient volume slider, queue button, mini-player button */}
+      {/* Right: volume icon + volume slider, queue button, mini-player button */}
       <div className="player-right-col">
         <button
           onClick={toggleMute}
           className="player-mute-btn"
           title={isMuted ? 'Unmute' : 'Mute'}
+          aria-label={isMuted ? 'Unmute' : 'Mute'}
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M4 9v6h4l5 4V5L8 9z" />
-            <path d="M17 9a4 4 0 0 1 0 6" />
+          <svg
+            width="17"
+            height="17"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M11 5L6 9H2v6h4l5 4V5z" />
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
           </svg>
         </button>
 
@@ -308,21 +417,42 @@ export const PlayerBar: React.FC = () => {
         <button
           onClick={toggleQueueOpen}
           className="ctrl-btn-glass"
-          style={{ width: '34px', height: '34px' }}
+          style={{ width: '32px', height: '32px' }}
           title="Open Queue"
+          aria-label="Open Queue"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-            <path d="M4 6h16M4 12h16M4 18h9" />
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
+            <path d="M4 6h16M4 12h16M4 18h10" />
           </svg>
         </button>
 
         <button
           onClick={handleMiniPlayer}
           className="ctrl-btn-glass"
-          style={{ width: '34px', height: '34px' }}
+          style={{ width: '32px', height: '32px' }}
           title="Mini Player"
+          aria-label="Mini Player"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
             <rect x="3" y="5" width="18" height="14" rx="3" />
             <rect x="12" y="11" width="7" height="5" rx="1.5" />
           </svg>

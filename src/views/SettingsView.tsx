@@ -237,7 +237,7 @@ export const SettingsView: React.FC = () => {
               <div className="settings-panel-heading">
                 <h2 className="settings-panel-title">Appearance</h2>
                 <p className="settings-panel-desc">
-                  Glass look, transparency and accent color
+                  Liquid glass, frosted blur and transparency
                 </p>
               </div>
             </div>
@@ -309,85 +309,6 @@ export const SettingsView: React.FC = () => {
                   <span className="settings-slider-val">
                     {Math.round(glassOpacity * 100)}%
                   </span>
-                </div>
-              </div>
-
-              {/* Theme Selector: Deep Sea (Primary), Citrus, Night, Pastel */}
-              <div className="settings-row" style={{ alignItems: 'flex-start' }}>
-                <div className="settings-row-info">
-                  <span className="settings-row-title">Color Theme</span>
-                  <span className="settings-row-sub">
-                    Liquid glass aesthetics & ambient aura
-                  </span>
-                </div>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  {[
-                    { id: 'deepsea', label: 'Deep Sea', color: '#0d1b2a', border: '#38d9ff' },
-                    { id: 'citrus', label: 'Citrus', color: '#fff4ec', border: '#FF9A1F' },
-                    { id: 'night', label: 'Night', color: '#14102d', border: '#ff4fa3' },
-                    { id: 'pastel', label: 'Pastel', color: '#f5f3ff', border: '#a78bfa' },
-                  ].map((t) => {
-                    const isSelected = (theme || 'deepsea') === t.id;
-                    return (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => setTheme(t.id as any)}
-                        style={{
-                          padding: '6px 14px',
-                          borderRadius: '12px',
-                          background: isSelected ? 'var(--accent-tint)' : 'rgba(255, 255, 255, 0.1)',
-                          border: `1.5px solid ${isSelected ? t.border : 'rgba(255, 255, 255, 0.2)'}`,
-                          color: 'var(--theme-text)',
-                          fontSize: '12px',
-                          fontWeight: isSelected ? 700 : 500,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          transition: 'all 0.15s ease',
-                          boxShadow: isSelected ? `0 0 12px ${t.border}44` : 'none',
-                        }}
-                      >
-                        <span
-                          style={{
-                            width: '10px',
-                            height: '10px',
-                            borderRadius: '50%',
-                            backgroundColor: t.border,
-                            boxShadow: `0 0 6px ${t.border}`,
-                          }}
-                        />
-                        <span>{t.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="settings-row">
-                <div className="settings-row-info">
-                  <span className="settings-row-title">Accent color</span>
-                  <span className="settings-row-sub">
-                    Tints highlights and the seek bar
-                  </span>
-                </div>
-                <div className="settings-swatches-row">
-                  {ACCENT_SWATCHES.map((swatch) => {
-                    const isSelected =
-                      accentColor.toLowerCase() === swatch.hex.toLowerCase();
-                    return (
-                      <button
-                        key={swatch.hex}
-                        type="button"
-                        onClick={() => setAccentColor(swatch.hex)}
-                        title={swatch.label}
-                        aria-label={`Accent ${swatch.label}`}
-                        className={`settings-swatch-circle ${isSelected ? 'selected' : ''}`}
-                        style={{ backgroundColor: swatch.hex }}
-                      />
-                    );
-                  })}
                 </div>
               </div>
 

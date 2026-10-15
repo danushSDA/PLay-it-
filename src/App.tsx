@@ -158,9 +158,14 @@ export const App: React.FC = () => {
                 ...DEFAULT_SPRING_SOFT,
                 opacity: { duration: 0.16, ease: EASE_APPLE },
               }}
-              className="music-content-grid"
+              style={{
+                display: 'flex',
+                flex: 1,
+                minWidth: 0,
+                minHeight: 0,
+                height: '100%',
+              }}
             >
-              <HeroCard />
               <MusicView />
             </motion.div>
           )}
