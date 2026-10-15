@@ -1,0 +1,63 @@
+{
+  "name": "play-it",
+  "version": "1.0.0",
+  "description": "Offline Liquid Glass Media Player for Windows",
+  "main": "dist/electron/main.js",
+  "scripts": {
+    "dev": "node scripts/dev.js",
+    "build:electron": "node scripts/build-electron.js",
+    "build:renderer": "vite build",
+    "build": "npm run build:renderer && npm run build:electron && electron-builder --win",
+    "build:dir": "npm run build:renderer && npm run build:electron && electron-builder --dir"
+  },
+  "build": {
+    "appId": "com.playit.app",
+    "productName": "PLay It",
+    "npmRebuild": false,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "package.json",
+      "node_modules/sqlite3/**/*"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  },
+  "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "@ffprobe-installer/ffprobe": "^2.1.2",
+    "framer-motion": "^12.4.7",
+    "lucide-react": "^0.475.0",
+    "music-metadata": "^10.8.2",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "sqlite3": "^5.1.7",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^4.2.1",
+    "@types/node": "^22.13.4",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.7.3",
+    "vite": "^6.1.0"
+  }
+}
